@@ -1,0 +1,178 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CodePipeline + CodeBuild + ECR + ECS Fargate, NO CodeDeploy
+Parameters:
+  AccountId:
+    Type: String
+    Description: AWS账号ID
+    Default: "226503510091"
+  Region:
+    Type: String
+    Default: ap-northeast-1
+  CodeCommitRepoName:
+    Type: String
+    Default: aws-cicd-demo
+  CodeCommitBranch:
+    Type: String
+    Default: master
+  EcrRepoName:
+    Type: String
+    Default: aws-cicd-demo-ecr
+  EcsClusterName:
+    Type: String
+    Default: default
+  EcsServiceName:
+    Type: String
+    Default: svc-aws-cicd-demo
+
+Resources:
+  # 1. S3 Artifact Bucket（流水线构件存储）
+  PipelineArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "codepipeline-artifact-${AccountId}-${Region}"
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # 2. CodePipeline IAM服务角色
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CodePipelinePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codecommit:*
+                  - codebuild:*
+                  - ecs:*
+                  - s3:*
+                  - iam:PassRole
+                  - cloudformation:*
+                Resource: "*"
+
+  # 3. CodeBuild项目（build+push镜像到ECR）
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: aws-cicd-demo-build
+      ServiceRole: !Sub arn:aws:iam::${AccountId}:role/CodeBuildServiceRole
+      Artifacts:
+        Type: CODEPIPELINE
+      Source:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        PrivilegedMode: true # docker build必须打开
+        EnvironmentVariables:
+          - Name: AWS_ACCOUNT_ID
+            Value: !Ref AccountId
+          - Name: AWS_REGION
+            Value: !Ref Region
+          - Name: ECR_REPO
+            Value: !Ref EcrRepoName
+  # buildspec.yml 放在codecommit仓库根目录，下面会给内容
+
+  # 4. CodeBuild IAM角色
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CodeBuildPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                  - ecr:PutImage
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+  # 5. CodePipeline主管道，核心！Deploy阶段用Amazon ECS（无CodeDeploy）
+  EcsCICDPipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: aws-cicd-demo-pipeline
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref PipelineArtifactBucket
+      Stages:
+        # Source阶段：CodeCommit
+        - Name: Source
+          Actions:
+            - Name: SourceCodeCommit
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Version: 1
+                Provider: CodeCommit
+              Configuration:
+                RepositoryName: !Ref CodeCommitRepoName
+                BranchName: !Ref CodeCommitBranch
+              OutputArtifacts:
+                - Name: SourceArtifact
+              RunOrder: 1
+        # Build阶段：CodeBuild构建镜像推ECR
+        - Name: Build
+          Actions:
+            - Name: BuildDockerImage
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildProject
+              InputArtifacts:
+                - Name: SourceArtifact
+              OutputArtifacts:
+                - Name: BuildArtifact
+              RunOrder: 1
+        # Deploy阶段：原生Amazon ECS滚动部署，✅没有CodeDeploy！
+        - Name: Deploy
+          Actions:
+            - Name: DeployToECS
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: ECS
+              Configuration:
+                ClusterName: !Ref EcsClusterName
+                ServiceName: !Ref EcsServiceName
+                FileName: imagedefinitions.json # CodeBuild输出这个文件，告诉ECS镜像地址
+              InputArtifacts:
+                - Name: BuildArtifact
+              RunOrder: 1

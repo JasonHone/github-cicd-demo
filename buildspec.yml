@@ -1,0 +1,41 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto8
+    commands:
+      - echo "📦 正在安装依赖并编译项目..."
+      - mvn clean package -DskipTests
+
+  pre_build:
+    commands:
+      - echo "🔐 正在登录 Amazon ECR..."
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - echo "🏷️ 准备镜像标签..."
+      # 生成短哈希标签
+      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      # 定义完整的 ECR 仓库 URI
+      - ECR_REPO_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
+
+  build:
+    commands:
+      - echo "🚀 正在构建 Docker 镜像..."
+      # 使用 ECR_REPO_URI 作为镜像名进行构建
+      - docker build -t $ECR_REPO_URI:$IMAGE_TAG .
+
+  post_build:
+    commands:
+      - echo "📤 正在推送镜像到 ECR..."
+      - docker push $ECR_REPO_URI:$IMAGE_TAG
+      - echo "✅ 镜像推送完成！"
+      # 使用正确的变量名生成 imagedefinitions.json
+      - echo "[{\"name\":\"aws-cicd-demo\",\"imageUri\":\"$ECR_REPO_URI:$IMAGE_TAG\"}]" > imagedefinitions.json
+      - echo ${IMAGE_TAG} > version.txt
+
+artifacts:
+  files:
+    - imagedefinitions.json
+    - version.txt
+    - deployspec.yml
+    - deploy.sh
