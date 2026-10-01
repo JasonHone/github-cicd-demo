@@ -1,4 +1,4 @@
-# aws-cicd-demo
+# github-cicd-demo
 
 #### 介绍
 测试部署项目demo

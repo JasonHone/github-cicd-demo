@@ -2,9 +2,9 @@
 # rollback.sh
 
 # 1. 解析传入的环境变量或参数
-DEPLOYMENT_NAME=${1:-"aws-cicd-demo"}
+DEPLOYMENT_NAME=${1:-"github-cicd-demo"}
 NAMESPACE=${2:-"k8s-cicd"}
-APP_NAME=${3:-"aws-cicd-demo"}
+APP_NAME=${3:-"github-cicd-demo"}
 
 if [ -z "$DEPLOYMENT_NAME" ]; then
     echo "❌ 错误：请提供 Deployment 名称作为参数。"

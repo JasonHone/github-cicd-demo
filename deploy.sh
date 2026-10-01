@@ -2,8 +2,8 @@
 set -e
 
 # ========== 修改这里为你自己的参数 ==========
-ECR_REPO_URI="226503510091.dkr.ecr.ap-northeast-1.amazonaws.com/aws-cicd-demo"
-CONTAINER_NAME="aws-cicd-demo"
+ECR_REPO_URI="226503510091.dkr.ecr.ap-northeast-1.amazonaws.com/github-cicd-demo"
+CONTAINER_NAME="github-cicd-demo"
 IMAGE_TAG=$(cat /home/ec2-user/deploy/version.txt)
 echo "当前部署镜像标签：${IMAGE_TAG}"
 HOST_PORT=8080

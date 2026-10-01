@@ -30,18 +30,18 @@ phases:
       - docker push $ECR_REPO_URI:$IMAGE_TAG
       - echo "✅ 镜像推送完成！"
       # 使用正确的变量名生成 imagedefinitions.json
-      - echo "[{\"name\":\"aws-cicd-demo\",\"imageUri\":\"$ECR_REPO_URI:$IMAGE_TAG\"}]" > imagedefinitions.json
+      - echo "[{\"name\":\"github-cicd-demo\",\"imageUri\":\"$ECR_REPO_URI:$IMAGE_TAG\"}]" > imagedefinitions.json
       - |
         aws ssm send-command \
         --document-name "AWS-RunShellScript" \
-        --targets "Key=tag:Name,Values=aws-cicd-demo" \
+        --targets "Key=tag:Name,Values=github-cicd-demo" \
         --parameters "commands=['#!/bin/bash
-          ECR_URI=\${AWS_ACCOUNT_ID}.dkr.ecr.\${AWS_DEFAULT_REGION}.amazonaws.com/aws-cicd-demo
+          ECR_URI=\${AWS_ACCOUNT_ID}.dkr.ecr.\${AWS_DEFAULT_REGION}.amazonaws.com/github-cicd-demo
           aws ecr get-login-password --region \${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin \${ECR_URI}
-          docker stop aws-cicd-demo 2>/dev/null || true
-          docker rm aws-cicd-demo 2>/dev/null || true
+          docker stop github-cicd-demo 2>/dev/null || true
+          docker rm github-cicd-demo 2>/dev/null || true
           docker pull \${ECR_URI}:${IMAGE_TAG}
-          docker run -d --name aws-cicd-demo -p 8080:8080 \${ECR_URI}:${IMAGE_TAG}
+          docker run -d --name github-cicd-demo -p 8080:8080 \${ECR_URI}:${IMAGE_TAG}
           echo \"deploy done tag:${IMAGE_TAG}\"
           ']" \
             --region ap-northeast-1

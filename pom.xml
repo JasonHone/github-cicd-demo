@@ -10,11 +10,11 @@
     </parent>
 
     <groupId>jasonHone</groupId>
-    <artifactId>aws-cicd-demo</artifactId>
+    <artifactId>github-cicd-demo</artifactId>
     <version>1.0.0</version>
-    <name>aws-cicd-demo</name>
+    <name>github-cicd-demo</name>
 
-    <description>AWS CICD 演示项目</description>
+    <description>GITHUB CICD 演示项目</description>
 
     <properties>
         <java.version>8</java.version>

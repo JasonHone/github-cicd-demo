@@ -10,19 +10,19 @@ Parameters:
     Default: ap-northeast-1
   CodeCommitRepoName:
     Type: String
-    Default: aws-cicd-demo
+    Default: github-cicd-demo
   CodeCommitBranch:
     Type: String
     Default: master
   EcrRepoName:
     Type: String
-    Default: aws-cicd-demo-ecr
+    Default: github-cicd-demo-ecr
   EcsClusterName:
     Type: String
     Default: default
   EcsServiceName:
     Type: String
-    Default: svc-aws-cicd-demo
+    Default: svc-github-cicd-demo
 
 Resources:
   # 1. S3 Artifact Bucket（流水线构件存储）
@@ -68,7 +68,7 @@ Resources:
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: aws-cicd-demo-build
+      Name: github-cicd-demo-build
       ServiceRole: !Sub arn:aws:iam::${AccountId}:role/CodeBuildServiceRole
       Artifacts:
         Type: CODEPIPELINE
@@ -123,7 +123,7 @@ Resources:
   EcsCICDPipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      Name: aws-cicd-demo-pipeline
+      Name: github-cicd-demo-pipeline
       RoleArn: !GetAtt CodePipelineServiceRole.Arn
       ArtifactStore:
         Type: S3

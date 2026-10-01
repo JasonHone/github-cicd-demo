@@ -30,7 +30,7 @@ phases:
       - docker push $ECR_REPO_URI:$IMAGE_TAG
       - echo "✅ 镜像推送完成！"
       # 使用正确的变量名生成 imagedefinitions.json
-      - echo "[{\"name\":\"aws-cicd-demo\",\"imageUri\":\"$ECR_REPO_URI:$IMAGE_TAG\"}]" > imagedefinitions.json
+      - echo "[{\"name\":\"github-cicd-demo\",\"imageUri\":\"$ECR_REPO_URI:$IMAGE_TAG\"}]" > imagedefinitions.json
       - echo ${IMAGE_TAG} > version.txt
 
 artifacts:
