@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-cicd-demo
+  namespace: github-cicd-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: github-cicd-demo
+  template:
+    metadata:
+      labels:
+        app: github-cicd-demo
+    spec:
+      containers:
+        - name: app
+          image: docker.io/k4nine/github-cicd-demo:latest
+          ports:
+            - containerPort: 80
