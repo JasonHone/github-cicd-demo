@@ -9,7 +9,7 @@ spec:
   ports:
     - protocol: TCP
       port: 80
-      targetPort: 80
+      targetPort: 8080
   type: ClusterIP
 ---
 apiVersion: apps/v1
@@ -31,4 +31,42 @@ spec:
         - name: github-cicd-demo
           image: 226503510091.dkr.ecr.ap-northeast-1.amazonaws.com/github-cicd-demo:latest
           ports:
-            - containerPort: 80
+            - containerPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: github-cicd-demo-ingress
+  namespace: github-cicd-demo
+  annotations:
+    alb.ingress.kubernetes.io/group.name: lets-cicd-exam
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/actions.ssl-redirect: '{"Type":"redirect","RedirectConfig":{"Protocol":"HTTPS","Port":"443","StatusCode":"HTTP_301"}}'
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:ap-northeast-1:226503510091:certificate/d876916b-ab30-4340-b66f-0123c1dab91f"
+    acme.cert-manager.io/http01-edit-in-place: "true"
+spec:
+  ingressClassName: alb
+  rules:
+    - host: demo.lets-cicd-exam.eu.cc
+      http:
+        paths:
+          - path: /ssl-redirect
+            pathType: Prefix
+            backend:
+              service:
+                name: ssl-redirect
+                port:
+                  name: use-annotation
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: github-cicd-demo
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - demo.lets-cicd-exam.eu.cc
+      secretName: demo-cert-tls
