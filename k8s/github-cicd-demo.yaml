@@ -52,7 +52,7 @@ spec:
     - host: demo.lets-cicd-exam.eu.cc
       http:
         paths:
-          - path: /ssl-redirect
+          - path: /
             pathType: Prefix
             backend:
               service:
